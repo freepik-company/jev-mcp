@@ -1,0 +1,6 @@
+/dist/
+/.cache/
+/.env
+/.env.*
+!/.env.example
+/jev-mcp

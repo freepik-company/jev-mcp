@@ -1,0 +1,58 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["state", "questions"],
+  "properties": {
+    "model": {"type": "string", "minLength": 1, "description": "System One model ID. Defaults to the server's JEV_MODEL (jev-latest). This is not a chat model."},
+    "state": {"type": ["string", "object", "array"], "description": "The text or structured data to evaluate. Do not include credentials."},
+    "questions": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Named questions about the same state. Answers use these exact names.",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "instructions", "criteria"],
+            "properties": {
+              "type": {"const": "choice"},
+              "instructions": {"$ref": "#/$defs/instructions"},
+              "criteria": {"type": "object", "minProperties": 2, "additionalProperties": {"$ref": "#/$defs/entry"}, "description": "Option name to description. Include a none/other option if no option may fit."}
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "instructions"],
+            "properties": {
+              "type": {"const": "noul"},
+              "instructions": {"$ref": "#/$defs/instructions"},
+              "criteria": {
+                "type": "object",
+                "required": ["true", "false"],
+                "additionalProperties": false,
+                "properties": {"true": {"$ref": "#/$defs/entry"}, "false": {"$ref": "#/$defs/entry"}},
+                "description": "Optional descriptions of when the answer is true or false. The result is P(true), not a boolean."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "instructions", "criteria"],
+            "properties": {
+              "type": {"const": "score"},
+              "instructions": {"$ref": "#/$defs/instructions"},
+              "criteria": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/entry"}, "description": "Ordered level descriptions, lowest first. The score is a weighted level index in [0, number of levels - 1], not necessarily an integer."}
+            }
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "instructions": {"type": ["string", "object", "array"], "minLength": 1, "description": "One concrete judgment to make about the state. Jev does not generate prose or perform reliable arithmetic."},
+    "entry": {"type": ["string", "object", "array", "null"]}
+  }
+}
