@@ -2,7 +2,7 @@
 
 A stdio MCP server for [Jev / System One](https://github.com/typesafe-ai/typesafe-sdk-js)
 typed decisions, through **OpenRouter or TypeSafe directly**.
-One tool, `decide`, returns answers, probabilities, confidence, and provider usage.
+Five tools return typed judgments and provider model information.
 
 ## Quick start
 
@@ -51,7 +51,28 @@ Example client configuration, with the credential inherited from its environment
 Default roots: `https://openrouter.ai/api` and `https://api.typesafe.ai`.
 Credentials belong in the server environment, never in tool arguments.
 
-## Tool: `decide`
+## Tools
+
+| Tool | Input | Result |
+| --- | --- | --- |
+| `decide` | Shared `state` and named `questions` | Raw typed answers and provider metadata |
+| `classify` | `items`, `categories`, `instructions` | Category per item, confidence and probabilities |
+| `verify` | `claims`, `evidence` | `supported`, `contradicted` or `insufficient_evidence` per claim |
+| `rerank` | `query`, `candidates`, optional `top_k` | Descending relevance scores on a 0–4 rubric |
+| `list_models` | No arguments | Compatible model IDs and the configured default |
+
+Items, claims, evidence and candidates are arrays of `{ "id": "unique-id", "text": "..." }`
+with 1–64 entries. Categories map category IDs to descriptions. The three task tools
+accept an optional `model`, make one inference call, and return `results` plus the
+unchanged provider `response` (including `response.usage.cost` when supplied).
+Classification and verification preserve input order; ranking preserves it for ties.
+`top_k` filters results after evaluating every candidate. Inputs are never truncated.
+
+Verification uses only supplied evidence; its verdict is a model judgment, not a
+proof or approval. No automatic acceptance thresholds are imposed. Model discovery
+uses OpenRouter's decisions catalogue or TypeSafe's native catalogue, without inference.
+
+### Example: `decide`
 
 ```json
 {

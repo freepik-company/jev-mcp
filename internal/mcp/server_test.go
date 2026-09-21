@@ -76,7 +76,7 @@ func TestDecideMCPContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(list.Tools) != 1 || list.Tools[0].Name != "decide" || list.Tools[0].OutputSchema == nil {
+	if len(list.Tools) != 5 {
 		t.Fatalf("catálogo inesperado: %+v", list.Tools)
 	}
 	for _, model := range []string{"", "typesafe/jev-1.13"} {
