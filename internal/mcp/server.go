@@ -4,6 +4,8 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"runtime/debug"
+	"strings"
 
 	"github.com/freepik-company/jev-mcp/internal/systemone"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -18,8 +20,23 @@ var inputSchemaJSON []byte
 var outputSchemaJSON []byte
 
 // Version is reported to MCP clients during initialization. Release builds
-// override it through -ldflags "-X .../internal/mcp.Version=<semver>".
+// override it through -ldflags "-X .../internal/mcp.Version=<version>";
+// "go install module@version" builds are recognised through the module build
+// info. Either form may carry a leading "v": every install path reports the
+// same bare semver for the same release.
 var Version = "dev"
+
+func serverVersion() string { return resolveVersion(Version, debug.ReadBuildInfo) }
+
+func resolveVersion(ldflag string, readBuildInfo func() (*debug.BuildInfo, bool)) string {
+	if ldflag != "" && ldflag != "dev" {
+		return strings.TrimPrefix(ldflag, "v")
+	}
+	if info, ok := readBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return strings.TrimPrefix(info.Main.Version, "v")
+	}
+	return "dev"
+}
 
 func New(client *systemone.Client) *mcp.Server {
 	var inputSchema, outputSchema map[string]any
@@ -30,7 +47,7 @@ func New(client *systemone.Client) *mcp.Server {
 	if err := json.Unmarshal(outputSchemaJSON, &outputSchema); err != nil {
 		panic(err)
 	}
-	server := mcp.NewServer(&mcp.Implementation{Name: "jev-mcp", Version: Version}, nil)
+	server := mcp.NewServer(&mcp.Implementation{Name: "jev-mcp", Version: serverVersion()}, nil)
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "decide",
 		Description: "Evaluate named, typed questions about a shared state using Jev/System One. " +

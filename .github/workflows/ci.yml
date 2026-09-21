@@ -46,6 +46,9 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Derive the bare semver from the tag (v0.3.0 -> 0.3.0), as the release job does
+        id: version
+        run: echo "semver=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
@@ -60,7 +63,7 @@ jobs:
           target: runtime
           platforms: linux/amd64,linux/arm64
           push: true
-          build-args: VERSION=${{ github.ref_name }}
+          build-args: VERSION=${{ steps.version.outputs.semver }}
           tags: |
             ghcr.io/${{ github.repository }}:${{ github.ref_name }}
             ghcr.io/${{ github.repository }}:latest
