@@ -34,7 +34,7 @@ func TestModelCatalogues(t *testing.T) {
 					t.Fatal("transporte incorrecto")
 				}
 				if (req.URL.Query().Get("output_modalities") == "decisions") != (tc.provider == "openrouter") {
-					t.Fatal("filtro de modalidad incorrecto")
+					t.Fatal("wrong output modality filter")
 				}
 				return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(tc.body)), Header: make(http.Header)}, nil
 			}))
@@ -43,10 +43,10 @@ func TestModelCatalogues(t *testing.T) {
 				t.Fatalf("valid=%v, error=%v", tc.valid, err)
 			}
 			if tc.valid && (len(result.Models) != tc.count || result.DefaultModel != "configured") {
-				t.Fatalf("catálogo: %+v", result)
+				t.Fatalf("unexpected catalogue: %+v", result)
 			}
 			if tc.name == "typesafe" && (result.Models[0].ID != "jev-1.13" || result.Models[0].ReleaseDate != "2026-09-17") {
-				t.Fatal("adaptación TypeSafe incorrecta")
+				t.Fatal("wrong TypeSafe adaptation")
 			}
 			if tc.name == "openrouter" && result.Models[0].Pricing["prompt"] != "0.000000042" {
 				t.Fatal("precio alterado")

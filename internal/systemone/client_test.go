@@ -22,21 +22,21 @@ func TestInputLimitAndCancellation(t *testing.T) {
 		return nil, req.Context().Err()
 	})
 	if _, err := client.Decide(context.Background(), Request{State: strings.Repeat("x", maxRequestBytes)}); err == nil {
-		t.Fatal("aceptó entrada de más de 1 MiB")
+		t.Fatal("accepted input larger than 1 MiB")
 	}
 	if calls.Load() != 0 {
-		t.Fatal("la entrada excesiva llegó a la red")
+		t.Fatal("oversized input reached the network")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if _, err := client.Decide(ctx, Request{}); err == nil || !strings.Contains(err.Error(), "cancelled") {
-		t.Fatalf("no propagó la cancelación: %v", err)
+		t.Fatalf("cancellation was not propagated: %v", err)
 	}
 }
 
 func TestRedirectDoesNotForwardCredential(t *testing.T) {
 	if testing.Short() {
-		t.Skip("integración: abre HTTP local")
+		t.Skip("integration: opens a local HTTP server")
 	}
 	var forwarded atomic.Int32
 	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -48,9 +48,9 @@ func TestRedirectDoesNotForwardCredential(t *testing.T) {
 	defer target.Close()
 	client := NewClient(config.Config{BaseURL: target.URL, APIKey: "private-key", Model: "jev-latest"}, nil)
 	if _, err := client.Decide(context.Background(), Request{}); err == nil || !strings.Contains(err.Error(), "307") {
-		t.Fatalf("no rechazó la redirección: %v", err)
+		t.Fatalf("redirect was not rejected: %v", err)
 	}
 	if forwarded.Load() != 0 {
-		t.Fatal("la redirección recibió la credencial")
+		t.Fatal("the redirect target received the credential")
 	}
 }

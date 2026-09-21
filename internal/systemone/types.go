@@ -1,4 +1,4 @@
-// Package systemone implementa el contrato compartido por OpenRouter y TypeSafe.
+// Package systemone implements the System One wire contract shared by OpenRouter and TypeSafe.
 package systemone
 
 import "encoding/json"
@@ -15,8 +15,8 @@ type Question struct {
 	Criteria     json.RawMessage `json:"criteria,omitempty"`
 }
 
-// Esta vista tipada valida las respuestas; el resultado completo se conserva
-// como JSON para no perder costes ni extensiones del proveedor.
+// This typed view validates the answers; the complete result is kept as raw
+// JSON so provider costs and extensions are never lost.
 type response struct {
 	Model *string `json:"model"`
 	Usage *struct {

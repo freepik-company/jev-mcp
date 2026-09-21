@@ -38,7 +38,7 @@ func NewClient(cfg config.Config, transport http.RoundTripper) *Client {
 		http: &http.Client{
 			Transport: transport,
 			Timeout:   30 * time.Second,
-			// No se reenvían credenciales ni se repiten inferencias facturables.
+			// Credentials are never forwarded and paid inferences are never repeated.
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 		},
 	}
@@ -79,7 +79,7 @@ func (c *Client) request(ctx context.Context, method, endpoint string, body []by
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	res, err := c.http.Do(req)
 	if err != nil {
-		// Los errores de transporte pueden incluir la URL o cabeceras: no van al modelo.
+		// Transport errors may include the URL or headers: they never reach the model.
 		if ctx.Err() != nil {
 			return nil, errors.New("System One request cancelled")
 		}
@@ -87,7 +87,7 @@ func (c *Client) request(ctx context.Context, method, endpoint string, body []by
 	}
 	defer res.Body.Close()
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		// Un proveedor puede reflejar la clave en su body de error. Solo sale el estado.
+		// A provider may echo the key in its error body. Only the status code is surfaced.
 		return nil, fmt.Errorf("System One returned HTTP %d; check the MCP credential, quota and endpoint", res.StatusCode)
 	}
 	body, err = io.ReadAll(io.LimitReader(res.Body, maxResponseBytes+1))

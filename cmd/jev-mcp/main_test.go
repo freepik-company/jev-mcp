@@ -15,8 +15,8 @@ import (
 const testInput = `{"state":"Refund requested", "questions":{"refund":{"type":"noul","instructions":"Is a refund requested?"}}}`
 const testOutput = `{"model":"jev-latest", "answers":{"refund":{"type":"noul","noul":0.99}},"usage":{"input_tokens":10,"output_tokens":2}}`
 
-// El hijo usa el arranque real por stdio: la suite detecta también contaminación
-// de stdout, env mal cableado o un proceso que no negocia el protocolo MCP.
+// The child uses the real stdio start-up, so the suite also catches stdout
+// pollution, miswired environment or a process that never negotiates MCP.
 func TestStdioRoundTrip(t *testing.T) {
 	if os.Getenv("JEV_TEST_CHILD") == "1" {
 		if err := run(); err != nil {
@@ -25,7 +25,7 @@ func TestStdioRoundTrip(t *testing.T) {
 		os.Exit(0)
 	}
 	if testing.Short() {
-		t.Skip("integración: proceso MCP y HTTP local")
+		t.Skip("integration: spawns the MCP process and a local HTTP server")
 	}
 	requests := make(chan *http.Request, 1)
 	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -45,10 +45,10 @@ func TestStdioRoundTrip(t *testing.T) {
 	defer session.Close()
 	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "decide", Arguments: json.RawMessage(testInput)})
 	if err != nil || result.IsError {
-		t.Fatalf("falló el MCP por stdio: %v, %+v", err, result)
+		t.Fatalf("stdio MCP failed: %v, %+v", err, result)
 	}
 	req := <-requests
 	if req.URL.Path != "/api/v1/systemone" || req.Header.Get("Authorization") != "Bearer stdio-key" {
-		t.Fatal("el proceso no usó el endpoint o la credencial configurados")
+		t.Fatal("the process did not use the configured endpoint or credential")
 	}
 }

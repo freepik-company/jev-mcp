@@ -91,7 +91,7 @@ func (s Service) Rerank(ctx context.Context, in RerankInput) (Result[RankedItem]
 		answer := answers[item.ID]
 		results = append(results, RankedItem{item.ID, answer.Score, answer.Confidence, answer.Probabilities})
 	}
-	// Los empates conservan el orden original; top_k filtra después de puntuar todos.
+	// Ties keep the original order; top_k filters after every candidate is scored.
 	sort.SliceStable(results, func(i, j int) bool { return results[i].Score > results[j].Score })
 	if in.TopK > 0 {
 		results = results[:in.TopK]

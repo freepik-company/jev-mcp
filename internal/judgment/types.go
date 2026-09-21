@@ -1,4 +1,4 @@
-// Package judgment prepara tareas concretas sobre el cliente común de System One.
+// Package judgment builds concrete tasks on top of the shared System One client.
 package judgment
 
 import "encoding/json"
@@ -51,6 +51,6 @@ type RankedItem struct {
 
 type Result[T any] struct {
 	Results []T `json:"results"`
-	// La respuesta original conserva uso, coste, rúbricas y extensiones del proveedor.
+	// The original response keeps usage, cost, rubrics and provider extensions.
 	Response json.RawMessage `json:"response"`
 }

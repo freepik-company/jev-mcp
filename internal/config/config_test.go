@@ -5,7 +5,7 @@ import "testing"
 func TestConfiguration(t *testing.T) {
 	for _, base := range []string{"file:///tmp/key", "http://example.com", "https://user:password@host", "https://host?key=secret", "https://host#fragment", "://"} {
 		if _, err := Load(func(name string) string { return map[string]string{"BASE_URL": base, "API_KEY": "key"}[name] }); err == nil {
-			t.Errorf("aceptó BASE_URL inválida: %s", base)
+			t.Errorf("accepted invalid BASE_URL: %s", base)
 		}
 	}
 	for _, key := range []string{"", " ", "${secrets:MISSING}"} {
@@ -15,7 +15,7 @@ func TestConfiguration(t *testing.T) {
 			}
 			return ""
 		}); err == nil {
-			t.Error("aceptó una credencial ausente o sin resolver")
+			t.Error("accepted a missing or unresolved credential")
 		}
 	}
 	for base, endpoint := range map[string]string{
@@ -44,22 +44,22 @@ func TestProviderConfiguration(t *testing.T) {
 			getenv := func(name string) string { return env[name] }
 			client, err := Load(getenv)
 			if err != nil || client.BaseURL != tc.endpoint || client.APIKey != "provider-key" || client.Model != "jev-1.13" {
-				t.Fatalf("configuración de proveedor incorrecta: %+v, %v", client, err)
+				t.Fatalf("wrong provider configuration: %+v, %v", client, err)
 			}
 			env["API_KEY"], env["BASE_URL"] = "explicit-key", "https://proxy.example/base"
 			client, err = Load(getenv)
 			if err != nil || client.APIKey != "explicit-key" || client.BaseURL != "https://proxy.example/base" {
-				t.Fatal("la configuración explícita debe prevalecer")
+				t.Fatal("explicit configuration must take precedence")
 			}
 			delete(env, "API_KEY")
 			delete(env, tc.keyName)
 			env["UNRELATED_API_KEY"] = "wrong-provider-key"
 			if _, err := Load(getenv); err == nil {
-				t.Fatal("aceptó la clave de otro proveedor")
+				t.Fatal("accepted another provider's key")
 			}
 		})
 	}
 	if _, err := Load(func(string) string { return "unknown" }); err == nil {
-		t.Fatal("aceptó un proveedor desconocido")
+		t.Fatal("accepted an unknown provider")
 	}
 }

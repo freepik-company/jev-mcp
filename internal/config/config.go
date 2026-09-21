@@ -1,4 +1,4 @@
-// Package config resuelve el entorno una sola vez, antes de arrancar el servidor.
+// Package config resolves the environment once, before the server starts.
 package config
 
 import (
@@ -26,7 +26,7 @@ func Load(getenv func(string) string) (Config, error) {
 		cfg.Provider = "typesafe"
 		cfg.BaseURL, keyName = "https://api.typesafe.ai", "TYPESAFE_API_KEY"
 	default:
-		return Config{}, errors.New("JEV_PROVIDER debe ser openrouter o typesafe")
+		return Config{}, errors.New("JEV_PROVIDER must be openrouter or typesafe")
 	}
 	if baseURL := getenv("BASE_URL"); baseURL != "" {
 		cfg.BaseURL = baseURL
@@ -39,7 +39,7 @@ func Load(getenv func(string) string) (Config, error) {
 		cfg.APIKey = getenv(keyName)
 	}
 	if strings.TrimSpace(cfg.APIKey) == "" || strings.HasPrefix(cfg.APIKey, "${") {
-		return Config{}, errors.New("falta API_KEY; configúrala en el entorno del servidor MCP")
+		return Config{}, errors.New("API key is missing; set OPENROUTER_API_KEY, TYPESAFE_API_KEY or API_KEY in the MCP server environment")
 	}
 	if err := validateBaseURL(cfg.BaseURL); err != nil {
 		return Config{}, err
@@ -51,12 +51,12 @@ func Load(getenv func(string) string) (Config, error) {
 func validateBaseURL(raw string) error {
 	base, err := url.Parse(raw)
 	if err != nil || base.Host == "" || base.User != nil || base.RawQuery != "" || base.Fragment != "" {
-		return errors.New("BASE_URL debe ser una URL base sin credenciales, query ni fragmento")
+		return errors.New("BASE_URL must be a base URL without credentials, query or fragment")
 	}
-	// HTTP solo sirve para pruebas o proxies locales; la clave nunca sale en claro.
+	// Plain HTTP is only for tests or local proxies; the key never travels in clear text.
 	local := base.Hostname() == "127.0.0.1" || base.Hostname() == "::1" || base.Hostname() == "localhost"
 	if base.Scheme != "https" && !(base.Scheme == "http" && local) {
-		return errors.New("BASE_URL debe usar HTTPS (HTTP solo en loopback)")
+		return errors.New("BASE_URL must use HTTPS (HTTP is allowed on loopback only)")
 	}
 	return nil
 }

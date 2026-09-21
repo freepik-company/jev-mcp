@@ -4,12 +4,14 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"runtime/debug"
+	"strings"
 
 	"github.com/freepik-company/jev-mcp/internal/systemone"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Los esquemas definen el contrato MCP público.
+// The embedded schemas define the public MCP contract.
 //
 //go:embed input.schema.json
 var inputSchemaJSON []byte
@@ -17,16 +19,35 @@ var inputSchemaJSON []byte
 //go:embed output.schema.json
 var outputSchemaJSON []byte
 
+// Version is reported to MCP clients during initialization. Release builds
+// override it through -ldflags "-X .../internal/mcp.Version=<version>";
+// "go install module@version" builds are recognised through the module build
+// info. Either form may carry a leading "v": every install path reports the
+// same bare semver for the same release.
+var Version = "dev"
+
+func serverVersion() string { return resolveVersion(Version, debug.ReadBuildInfo) }
+
+func resolveVersion(ldflag string, readBuildInfo func() (*debug.BuildInfo, bool)) string {
+	if ldflag != "" && ldflag != "dev" {
+		return strings.TrimPrefix(ldflag, "v")
+	}
+	if info, ok := readBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return strings.TrimPrefix(info.Main.Version, "v")
+	}
+	return "dev"
+}
+
 func New(client *systemone.Client) *mcp.Server {
 	var inputSchema, outputSchema map[string]any
-	// Son constantes embebidas: un error aquí es un fallo de programación.
+	// These are embedded constants: an error here is a programming mistake.
 	if err := json.Unmarshal(inputSchemaJSON, &inputSchema); err != nil {
 		panic(err)
 	}
 	if err := json.Unmarshal(outputSchemaJSON, &outputSchema); err != nil {
 		panic(err)
 	}
-	server := mcp.NewServer(&mcp.Implementation{Name: "jev-mcp", Version: "0.2.0"}, nil)
+	server := mcp.NewServer(&mcp.Implementation{Name: "jev-mcp", Version: serverVersion()}, nil)
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "decide",
 		Description: "Evaluate named, typed questions about a shared state using Jev/System One. " +

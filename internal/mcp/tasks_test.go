@@ -33,7 +33,7 @@ func TestTaskContracts(t *testing.T) {
 					return nil, err
 				}
 				if tc.name == "classify" && in.Model != "pinned" {
-					t.Error("no propagó el modelo")
+					t.Error("model was not propagated")
 				}
 				expectedCount := 2
 				if tc.name == "rerank" {
@@ -46,7 +46,7 @@ func TestTaskContracts(t *testing.T) {
 				for id, q := range in.Questions {
 					instruction, ok := q.Instructions.(map[string]any)
 					if !ok || instruction["item_id"] != id {
-						t.Fatal("pregunta desligada de su elemento")
+						t.Fatal("question detached from its item")
 					}
 					answer := map[string]any{"type": q.Type, "confidence": 0.9}
 					probabilities := map[string]float64{}
@@ -69,7 +69,7 @@ func TestTaskContracts(t *testing.T) {
 							probabilities[key] = 0
 						}
 						if _, ok := criteria[choice]; !ok {
-							t.Fatal("faltan las categorías de la tarea")
+							t.Fatal("task categories are missing")
 						}
 						probabilities[choice] = 1
 						answer["choice"] = choice
@@ -127,7 +127,7 @@ func TestTaskContracts(t *testing.T) {
 				t.Fatal("llamadas extra o metadatos perdidos")
 			}
 			if tc.name == "rerank" && len(out.Response.Answers) != 3 {
-				t.Fatal("top_k recortó la respuesta original")
+				t.Fatal("top_k truncated the original response")
 			}
 		})
 	}
@@ -154,12 +154,12 @@ func TestInvalidTasksNeverCallProvider(t *testing.T) {
 		t.Run(tc.name+tc.input, func(t *testing.T) {
 			out, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: tc.name, Arguments: json.RawMessage(tc.input)})
 			if err == nil && !out.IsError {
-				t.Fatal("aceptó una entrada inválida")
+				t.Fatal("accepted invalid input")
 			}
 		})
 	}
 	if calls != 0 {
-		t.Fatalf("%d llamadas facturables inválidas", calls)
+		t.Fatalf("%d invalid paid calls", calls)
 	}
 }
 
@@ -175,7 +175,7 @@ func TestTaskFailureAndInputPreservation(t *testing.T) {
 	input := map[string]any{"claims": []map[string]string{{"id": "claim", "text": "test"}}, "evidence": []map[string]string{{"id": "source", "text": longText}}}
 	out, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "verify", Arguments: input})
 	if err == nil && !out.IsError {
-		t.Fatal("presentó respuestas ausentes como verificación")
+		t.Fatal("missing answers were presented as a verification")
 	}
 	raw, _ := json.Marshal(received.State)
 	var state struct {
@@ -194,7 +194,7 @@ func TestTaskFailureAndInputPreservation(t *testing.T) {
 func TestFiveToolsAndModelDiscovery(t *testing.T) {
 	session := testSession(t, func(req *http.Request) (*http.Response, error) {
 		if req.Method != "GET" || req.URL.Path != "/api/v1/models" || req.URL.Query().Get("output_modalities") != "decisions" {
-			t.Fatal("ruta de catálogo incorrecta")
+			t.Fatal("wrong catalogue path")
 		}
 		return response(200, `{"data":[{"id":"typesafe/jev","name":"Jev","architecture":{"output_modalities":["decisions"]}}]}`), nil
 	})
@@ -206,11 +206,11 @@ func TestFiveToolsAndModelDiscovery(t *testing.T) {
 	for _, tool := range list.Tools {
 		names = append(names, tool.Name)
 		if tool.OutputSchema == nil {
-			t.Fatal("falta contrato de salida")
+			t.Fatal("output contract is missing")
 		}
 	}
 	if !reflect.DeepEqual(names, []string{"classify", "decide", "list_models", "rerank", "verify"}) {
-		t.Fatalf("catálogo: %v", names)
+		t.Fatalf("unexpected catalogue: %v", names)
 	}
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "list_models", Arguments: map[string]any{}})
 	if err != nil || result.IsError {
