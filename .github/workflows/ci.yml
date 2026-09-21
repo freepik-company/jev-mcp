@@ -4,6 +4,12 @@ on:
     branches: [main]
     tags: ['v*']
   pull_request:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag (v1.2.3) whose image is already on GHCR; republishes it to the MCP Registry only
+        required: true
+        type: string
 permissions:
   contents: read
 jobs:
@@ -13,10 +19,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: make test
       - run: make image
-      - name: Check server.json is valid JSON and names the image label
-        run: |
-          python3 -c 'import json; json.load(open("server.json"))'
-          grep -q 'io.modelcontextprotocol.server.name="io.github.freepik-company/jev-mcp"' Dockerfile
+      - name: Check server.json against the MCP Registry rules the publisher does not check locally
+        run: scripts/check-server-json.sh
   vulnerabilities:
     runs-on: ubuntu-latest
     steps:
@@ -68,20 +72,26 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ github.ref_name }}
             ghcr.io/${{ github.repository }}:latest
   mcp-registry:
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Runs after the image of a tag push, or on demand for a tag whose image already exists.
+    if: always() && !cancelled() && (needs.image.result == 'success' || github.event_name == 'workflow_dispatch')
     needs: image
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
       - name: Point server.json at this release
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          jq --arg v "$version" --arg image "ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF_NAME}" \
+          case "$TAG" in v*) ;; *) echo "tag must look like v1.2.3, got '$TAG'" >&2; exit 1;; esac
+          jq --arg v "${TAG#v}" --arg image "ghcr.io/${GITHUB_REPOSITORY}:${TAG}" \
             '.version = $v | .packages[0].identifier = $image' server.json > server.tmp && mv server.tmp server.json
           cat server.json
+          scripts/check-server-json.sh
       - name: Install mcp-publisher
         run: |
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
