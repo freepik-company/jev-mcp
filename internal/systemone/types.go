@@ -18,6 +18,12 @@ type Question struct {
 // Esta vista tipada valida las respuestas; el resultado completo se conserva
 // como JSON para no perder costes ni extensiones del proveedor.
 type response struct {
+	Model *string `json:"model"`
+	Usage *struct {
+		InputTokens  *int64   `json:"input_tokens"`
+		OutputTokens *int64   `json:"output_tokens"`
+		Cost         *float64 `json:"cost"`
+	} `json:"usage"`
 	Answers map[string]answer `json:"answers"`
 }
 

@@ -10,18 +10,20 @@ import (
 const DefaultModel = "jev-latest"
 
 type Config struct {
-	BaseURL string
-	APIKey  string
-	Model   string
+	Provider string
+	BaseURL  string
+	APIKey   string
+	Model    string
 }
 
 func Load(getenv func(string) string) (Config, error) {
-	cfg := Config{Model: DefaultModel}
+	cfg := Config{Model: DefaultModel, Provider: "openrouter"}
 	var keyName string
 	switch getenv("JEV_PROVIDER") {
 	case "", "openrouter":
 		cfg.BaseURL, keyName = "https://openrouter.ai/api", "OPENROUTER_API_KEY"
 	case "typesafe":
+		cfg.Provider = "typesafe"
 		cfg.BaseURL, keyName = "https://api.typesafe.ai", "TYPESAFE_API_KEY"
 	default:
 		return Config{}, errors.New("JEV_PROVIDER debe ser openrouter o typesafe")

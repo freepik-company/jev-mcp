@@ -21,6 +21,8 @@ const (
 
 type Client struct {
 	endpoint string
+	baseURL  string
+	provider string
 	apiKey   string
 	model    string
 	http     *http.Client
@@ -29,6 +31,8 @@ type Client struct {
 func NewClient(cfg config.Config, transport http.RoundTripper) *Client {
 	return &Client{
 		endpoint: strings.TrimRight(cfg.BaseURL, "/") + "/v1/systemone",
+		baseURL:  strings.TrimRight(cfg.BaseURL, "/"),
+		provider: cfg.Provider,
 		apiKey:   cfg.APIKey,
 		model:    cfg.Model,
 		http: &http.Client{
@@ -48,7 +52,25 @@ func (c *Client) Decide(ctx context.Context, in Request) (json.RawMessage, error
 	if err != nil || len(body) > maxRequestBytes {
 		return nil, errors.New("Decision input must be valid JSON no larger than 1 MiB")
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(body))
+	body, err = c.request(ctx, http.MethodPost, c.endpoint, body)
+	if err != nil {
+		return nil, err
+	}
+	var out response
+	if err := json.Unmarshal(body, &out); err != nil {
+		return nil, errors.New("System One returned invalid JSON")
+	}
+	if out.Model == nil || out.Usage == nil || out.Usage.InputTokens == nil || out.Usage.OutputTokens == nil || *out.Usage.InputTokens < 0 || *out.Usage.OutputTokens < 0 || (out.Usage.Cost != nil && *out.Usage.Cost < 0) {
+		return nil, errors.New("System One returned incomplete model or usage metadata")
+	}
+	if err := validateAnswers(in.Questions, out.Answers); err != nil {
+		return nil, err
+	}
+	return json.RawMessage(body), nil
+}
+
+func (c *Client) request(ctx context.Context, method, endpoint string, body []byte) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, method, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return nil, errors.New("Cannot create the System One request")
 	}
@@ -72,12 +94,6 @@ func (c *Client) Decide(ctx context.Context, in Request) (json.RawMessage, error
 	if err != nil || len(body) > maxResponseBytes {
 		return nil, errors.New("System One response is unreadable or exceeds 2 MiB")
 	}
-	var out response
-	if err := json.Unmarshal(body, &out); err != nil {
-		return nil, errors.New("System One returned invalid JSON")
-	}
-	if err := validateAnswers(in.Questions, out.Answers); err != nil {
-		return nil, err
-	}
-	return json.RawMessage(body), nil
+
+	return body, nil
 }

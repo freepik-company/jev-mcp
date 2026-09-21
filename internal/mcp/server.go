@@ -26,7 +26,7 @@ func New(client *systemone.Client) *mcp.Server {
 	if err := json.Unmarshal(outputSchemaJSON, &outputSchema); err != nil {
 		panic(err)
 	}
-	server := mcp.NewServer(&mcp.Implementation{Name: "jev-mcp", Version: "0.1.0"}, nil)
+	server := mcp.NewServer(&mcp.Implementation{Name: "jev-mcp", Version: "0.2.0"}, nil)
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "decide",
 		Description: "Evaluate named, typed questions about a shared state using Jev/System One. " +
@@ -39,6 +39,7 @@ func New(client *systemone.Client) *mcp.Server {
 		out, err := client.Decide(ctx, in)
 		return nil, out, err
 	})
+	registerTasks(server, client, outputSchema)
 	return server
 }
 
