@@ -1,0 +1,48 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.freepik-company/jev-mcp",
+  "title": "Jev MCP",
+  "description": "Typed decisions with Jev / System One via OpenRouter or TypeSafe: decide, classify, verify, rerank and list_models.",
+  "version": "0.2.0",
+  "repository": {
+    "url": "https://github.com/freepik-company/jev-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/freepik-company/jev-mcp#readme",
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/freepik-company/jev-mcp:0.2.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "OPENROUTER_API_KEY",
+          "description": "OpenRouter API key. Required when JEV_PROVIDER is openrouter (the default).",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "TYPESAFE_API_KEY",
+          "description": "TypeSafe API key. Required when JEV_PROVIDER is typesafe.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "JEV_PROVIDER",
+          "description": "Provider that serves Jev.",
+          "isRequired": false,
+          "default": "openrouter",
+          "choices": ["openrouter", "typesafe"]
+        },
+        {
+          "name": "JEV_MODEL",
+          "description": "Default System One model ID; each tool call may override it.",
+          "isRequired": false,
+          "default": "jev-latest"
+        }
+      ]
+    }
+  ]
+}
