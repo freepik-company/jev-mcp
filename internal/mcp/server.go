@@ -9,7 +9,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Los esquemas definen el contrato MCP público.
+// The embedded schemas define the public MCP contract.
 //
 //go:embed input.schema.json
 var inputSchemaJSON []byte
@@ -17,16 +17,20 @@ var inputSchemaJSON []byte
 //go:embed output.schema.json
 var outputSchemaJSON []byte
 
+// Version is reported to MCP clients during initialization. Release builds
+// override it through -ldflags "-X .../internal/mcp.Version=<semver>".
+var Version = "dev"
+
 func New(client *systemone.Client) *mcp.Server {
 	var inputSchema, outputSchema map[string]any
-	// Son constantes embebidas: un error aquí es un fallo de programación.
+	// These are embedded constants: an error here is a programming mistake.
 	if err := json.Unmarshal(inputSchemaJSON, &inputSchema); err != nil {
 		panic(err)
 	}
 	if err := json.Unmarshal(outputSchemaJSON, &outputSchema); err != nil {
 		panic(err)
 	}
-	server := mcp.NewServer(&mcp.Implementation{Name: "jev-mcp", Version: "0.2.0"}, nil)
+	server := mcp.NewServer(&mcp.Implementation{Name: "jev-mcp", Version: Version}, nil)
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "decide",
 		Description: "Evaluate named, typed questions about a shared state using Jev/System One. " +

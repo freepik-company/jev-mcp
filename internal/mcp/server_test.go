@@ -77,7 +77,7 @@ func TestDecideMCPContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(list.Tools) != 5 {
-		t.Fatalf("catálogo inesperado: %+v", list.Tools)
+		t.Fatalf("unexpected tool catalogue: %+v", list.Tools)
 	}
 	for _, model := range []string{"", "typesafe/jev-1.13"} {
 		var input map[string]any
@@ -98,7 +98,7 @@ func TestDecideMCPContract(t *testing.T) {
 		gotJSON, _ := json.Marshal(result.StructuredContent)
 		wantJSON, _ := json.Marshal(want)
 		if string(gotJSON) != string(wantJSON) {
-			t.Fatalf("se perdió respuesta, metadatos o coste: %s", gotJSON)
+			t.Fatalf("response, metadata or cost was lost: %s", gotJSON)
 		}
 		var textOutput any
 		if len(result.Content) == 1 {
@@ -110,14 +110,14 @@ func TestDecideMCPContract(t *testing.T) {
 		}
 		textJSON, _ := json.Marshal(textOutput)
 		if string(textJSON) != string(wantJSON) {
-			t.Fatalf("falta el resultado de texto para clientes antiguos: %+v", result.Content)
+			t.Fatalf("text result for legacy clients is missing: %+v", result.Content)
 		}
 		req, body := <-requests, <-bodies
 		if req.URL.String() != "https://openrouter.ai/api/v1/systemone" || req.Method != "POST" {
 			t.Fatalf("ruta/protocolo incorrecto: %s %s", req.Method, req.URL)
 		}
 		if req.Header.Get("Authorization") != "Bearer secret-for-test" || req.Header.Get("Content-Type") != "application/json" {
-			t.Fatal("faltan la autenticación o el tipo de contenido")
+			t.Fatal("authentication or content type is missing")
 		}
 		if model == "" {
 			model = "jev-latest"
@@ -152,11 +152,11 @@ func TestInvalidInputNeverReachesProvider(t *testing.T) {
 	} {
 		result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "decide", Arguments: json.RawMessage(input)})
 		if err == nil && !result.IsError {
-			t.Errorf("aceptó entrada inválida: %s", input)
+			t.Errorf("accepted invalid input: %s", input)
 		}
 	}
 	if calls.Load() != 0 {
-		t.Fatalf("%d entradas inválidas llegaron al proveedor", calls.Load())
+		t.Fatalf("%d invalid inputs reached the provider", calls.Load())
 	}
 }
 
@@ -205,14 +205,14 @@ func TestProviderFailuresAreErrorsWithoutSecretsOrRetries(t *testing.T) {
 			})
 			result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "decide", Arguments: json.RawMessage(testInput)})
 			if err == nil && !result.IsError {
-				t.Fatalf("fallo presentado como decisión: %+v", result)
+				t.Fatalf("failure presented as a decision: %+v", result)
 			}
 			encoded, _ := json.Marshal(result)
 			if strings.Contains(string(encoded)+fmt.Sprint(err), "secret-for-test") {
-				t.Fatal("el error filtró la credencial")
+				t.Fatal("the error leaked the credential")
 			}
 			if calls.Load() != 1 {
-				t.Fatalf("reintentó una llamada facturable: %d", calls.Load())
+				t.Fatalf("a paid call was retried: %d", calls.Load())
 			}
 		})
 	}

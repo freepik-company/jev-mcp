@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	// Margen explícito para redondeos del proveedor; no se modifica el resultado.
+	// Explicit allowance for provider rounding; the result itself is never altered.
 	roundingTolerance = 0.01
 	comparisonEpsilon = 1e-12
 )

@@ -68,7 +68,7 @@ func decodeModels(body []byte, provider string) ([]Model, error) {
 		if json.Unmarshal(body, &wire) != nil || wire.Data == nil {
 			return nil, invalid
 		}
-		// Sin paginación solicitada OpenRouter devuelve el catálogo completo. Nunca se ocultan páginas.
+		// Without requested pagination OpenRouter returns the whole catalogue. Pages are never silently dropped.
 		if wire.Links.Next != nil && *wire.Links.Next != "" {
 			return nil, errors.New("Provider returned an incomplete model catalogue")
 		}
