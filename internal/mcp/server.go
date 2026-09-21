@@ -1,14 +1,15 @@
-package main
+package mcpserver
 
 import (
 	"context"
 	_ "embed"
 	"encoding/json"
 
+	"github.com/freepik-company/jev-mcp/internal/systemone"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Los esquemas son parte del contrato público, no tipos internos de Altherium.
+// Los esquemas definen el contrato MCP público.
 //
 //go:embed input.schema.json
 var inputSchemaJSON []byte
@@ -16,19 +17,7 @@ var inputSchemaJSON []byte
 //go:embed output.schema.json
 var outputSchemaJSON []byte
 
-type decideRequest struct {
-	Model     string              `json:"model,omitempty"`
-	State     any                 `json:"state"`
-	Questions map[string]question `json:"questions"`
-}
-
-type question struct {
-	Type         string `json:"type"`
-	Instructions any    `json:"instructions"`
-	Criteria     any    `json:"criteria,omitempty"`
-}
-
-func newServer(client *decisionClient) *mcp.Server {
+func New(client *systemone.Client) *mcp.Server {
 	var inputSchema, outputSchema map[string]any
 	// Son constantes embebidas: un error aquí es un fallo de programación.
 	if err := json.Unmarshal(inputSchemaJSON, &inputSchema); err != nil {
@@ -46,8 +35,8 @@ func newServer(client *decisionClient) *mcp.Server {
 			"This is a paid inference call, not a governance approval. Never include credentials in the input.",
 		InputSchema: inputSchema, OutputSchema: outputSchema,
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: ptr(true)},
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in decideRequest) (*mcp.CallToolResult, map[string]any, error) {
-		out, err := client.decide(ctx, in)
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in systemone.Request) (*mcp.CallToolResult, json.RawMessage, error) {
+		out, err := client.Decide(ctx, in)
 		return nil, out, err
 	})
 	return server

@@ -1,4 +1,4 @@
-package main
+package mcpserver
 
 import (
 	"context"
@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/freepik-company/jev-mcp/internal/config"
+	"github.com/freepik-company/jev-mcp/internal/systemone"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -42,13 +44,9 @@ func response(status int, body string) *http.Response {
 
 func testSession(t *testing.T, transport roundTripFunc) *mcp.ClientSession {
 	t.Helper()
-	client, err := newClient("https://openrouter.ai/api/", "secret-for-test", "jev-latest")
-	if err != nil {
-		t.Fatal(err)
-	}
-	client.http.Transport = transport
+	client := systemone.NewClient(config.Config{BaseURL: "https://openrouter.ai/api/", APIKey: "secret-for-test", Model: "jev-latest"}, transport)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	serverSession, err := newServer(client).Connect(context.Background(), serverTransport, nil)
+	serverSession, err := New(client).Connect(context.Background(), serverTransport, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +100,16 @@ func TestDecideMCPContract(t *testing.T) {
 		if string(gotJSON) != string(wantJSON) {
 			t.Fatalf("se perdió respuesta, metadatos o coste: %s", gotJSON)
 		}
-		if len(result.Content) != 1 || result.Content[0].(*mcp.TextContent).Text != string(wantJSON) {
+		var textOutput any
+		if len(result.Content) == 1 {
+			if content, ok := result.Content[0].(*mcp.TextContent); ok {
+				if err := json.Unmarshal([]byte(content.Text), &textOutput); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		textJSON, _ := json.Marshal(textOutput)
+		if string(textJSON) != string(wantJSON) {
 			t.Fatalf("falta el resultado de texto para clientes antiguos: %+v", result.Content)
 		}
 		req, body := <-requests, <-bodies
@@ -166,7 +173,7 @@ func TestProviderFailuresAreErrorsWithoutSecretsOrRetries(t *testing.T) {
 		{"redirect", 307, "secret-for-test", nil},
 		{"transport", 0, "", fmt.Errorf("Authorization: Bearer secret-for-test")},
 		{"invalid_json", 200, "secret-for-test", nil},
-		{"too_large", 200, strings.Repeat("x", maxResponseBytes+1), nil},
+		{"too_large", 200, strings.Repeat("x", (2<<20)+1), nil},
 		{"missing_answer", 200, strings.Replace(testOutput, `"refund"`, `"different"`, 1), nil},
 		{"wrong_type", 200, strings.Replace(testOutput, `"type":"noul"`, `"type":"choice"`, 1), nil},
 		{"unoffered_choice", 200, strings.Replace(testOutput, `"choice":"billing"`, `"choice":"secret-for-test"`, 1), nil},
@@ -180,6 +187,9 @@ func TestProviderFailuresAreErrorsWithoutSecretsOrRetries(t *testing.T) {
 		{"missing_envelope", 200, `{"model":"jev","usage":{}}`, nil},
 		{"null_envelope", 200, `{"model":"jev","answers":null,"usage":{}}`, nil},
 		{"empty_envelope", 200, `{"model":"jev","answers":{},"usage":{}}`, nil},
+		{"null_probability", 200, strings.Replace(testOutput, `"technical":0.02`, `"technical":null`, 1), nil},
+		{"missing_confidence", 200, strings.Replace(testOutput, `"confidence":0.95,`, ``, 1), nil},
+		{"null_noul", 200, strings.Replace(testOutput, `"noul":0.97`, `"noul":null`, 1), nil},
 		{"invalid_confidence", 200, strings.Replace(testOutput, `"confidence":0.95`, `"confidence":-1`, 1), nil},
 		{"missing_usage", 200, strings.Replace(testOutput, `"usage"`, `"missing_usage"`, 1), nil},
 	}
@@ -221,16 +231,13 @@ func TestDistributionRoundingAndTies(t *testing.T) {
 		{"probability_string", strings.Replace(testOutput, `"technical":0.02`, `"technical":"0.02"`, 1), false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var in decideRequest
-			var out map[string]any
-			if err := json.Unmarshal([]byte(testInput), &in); err != nil {
-				t.Fatal(err)
-			}
-			if err := json.Unmarshal([]byte(tc.body), &out); err != nil {
-				t.Fatal(err)
-			}
-			if err := validateAnswers(in.Questions, out); (err == nil) != tc.valid {
-				t.Fatalf("valid=%v: %v", tc.valid, err)
+			session := testSession(t, func(*http.Request) (*http.Response, error) {
+				return response(200, tc.body), nil
+			})
+			result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "decide", Arguments: json.RawMessage(testInput)})
+			valid := err == nil && !result.IsError
+			if valid != tc.valid {
+				t.Fatalf("valid=%v: %v, %+v", tc.valid, err, result)
 			}
 		})
 	}

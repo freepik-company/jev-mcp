@@ -1,0 +1,83 @@
+package systemone
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/freepik-company/jev-mcp/internal/config"
+)
+
+const (
+	maxRequestBytes  = 1 << 20
+	maxResponseBytes = 2 << 20
+)
+
+type Client struct {
+	endpoint string
+	apiKey   string
+	model    string
+	http     *http.Client
+}
+
+func NewClient(cfg config.Config, transport http.RoundTripper) *Client {
+	return &Client{
+		endpoint: strings.TrimRight(cfg.BaseURL, "/") + "/v1/systemone",
+		apiKey:   cfg.APIKey,
+		model:    cfg.Model,
+		http: &http.Client{
+			Transport: transport,
+			Timeout:   30 * time.Second,
+			// No se reenvían credenciales ni se repiten inferencias facturables.
+			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+		},
+	}
+}
+
+func (c *Client) Decide(ctx context.Context, in Request) (json.RawMessage, error) {
+	if in.Model == "" {
+		in.Model = c.model
+	}
+	body, err := json.Marshal(in)
+	if err != nil || len(body) > maxRequestBytes {
+		return nil, errors.New("Decision input must be valid JSON no larger than 1 MiB")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, errors.New("Cannot create the System One request")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	res, err := c.http.Do(req)
+	if err != nil {
+		// Los errores de transporte pueden incluir la URL o cabeceras: no van al modelo.
+		if ctx.Err() != nil {
+			return nil, errors.New("System One request cancelled")
+		}
+		return nil, errors.New("System One request failed or timed out")
+	}
+	defer res.Body.Close()
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		// Un proveedor puede reflejar la clave en su body de error. Solo sale el estado.
+		return nil, fmt.Errorf("System One returned HTTP %d; check the MCP credential, quota and endpoint", res.StatusCode)
+	}
+	body, err = io.ReadAll(io.LimitReader(res.Body, maxResponseBytes+1))
+	if err != nil || len(body) > maxResponseBytes {
+		return nil, errors.New("System One response is unreadable or exceeds 2 MiB")
+	}
+	var out response
+	if err := json.Unmarshal(body, &out); err != nil {
+		return nil, errors.New("System One returned invalid JSON")
+	}
+	if err := validateAnswers(in.Questions, out.Answers); err != nil {
+		return nil, err
+	}
+	return json.RawMessage(body), nil
+}

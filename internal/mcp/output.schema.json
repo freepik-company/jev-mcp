@@ -44,7 +44,7 @@
         "output_tokens": {"type": "integer", "minimum": 0},
         "cost": {"type": "number", "minimum": 0}
       },
-      "description": "Provider usage unchanged, including cost when supplied. Not automatically charged to an Altherium run budget."
+      "description": "Provider usage unchanged, including cost when supplied."
     }
   },
   "$defs": {
