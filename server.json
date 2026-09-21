@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.freepik-company/jev-mcp",
   "title": "Jev MCP",
-  "description": "Typed decisions with Jev / System One via OpenRouter or TypeSafe: decide, classify, verify, rerank and list_models.",
+  "description": "Typed decisions with Jev / System One via OpenRouter or TypeSafe: classify, verify, rerank, decide.",
   "version": "0.2.0",
   "repository": {
     "url": "https://github.com/freepik-company/jev-mcp",
@@ -34,7 +34,10 @@
           "description": "Provider that serves Jev.",
           "isRequired": false,
           "default": "openrouter",
-          "choices": ["openrouter", "typesafe"]
+          "choices": [
+            "openrouter",
+            "typesafe"
+          ]
         },
         {
           "name": "JEV_MODEL",

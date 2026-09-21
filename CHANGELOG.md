@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- The MCP Registry rejected the `server.json` description for exceeding 100
+  characters, so the `v0.3.0` registry publish failed after the release and
+  image had shipped. The description is shorter, CI checks it and the other
+  publish-time rules on every push, and the registry job can be re-run by hand
+  for a tag whose image already exists.
+
+## [0.3.0] - 2026-09-21
+
 ### Added
 
 - Open-source project files: contributing guide, code of conduct, security
@@ -43,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   no automatic retries of paid calls.
 - Container image and cross-platform release archives built by CI.
 
-[Unreleased]: https://github.com/freepik-company/jev-mcp/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/freepik-company/jev-mcp/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/freepik-company/jev-mcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/freepik-company/jev-mcp/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/freepik-company/jev-mcp/releases/tag/v0.1.0
