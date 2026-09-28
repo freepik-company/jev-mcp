@@ -242,3 +242,38 @@ func TestDistributionRoundingAndTies(t *testing.T) {
 		})
 	}
 }
+
+// Models that write tool calls as XML rather than JSON (Qwen3, GLM) send every argument as text,
+// and the serving engine types it back from that property's own "type". vLLM does not follow
+// "$ref": an array declared only as {"$ref": "#/$defs/items"} reached jev__rerank as a JSON
+// string, and the call failed validation until the model gave up. So every top-level argument
+// states its type next to any "$ref".
+func TestEveryTopLevelArgumentDeclaresItsType(t *testing.T) {
+	session := testSession(t, func(*http.Request) (*http.Response, error) { return response(500, "{}"), nil })
+	list, err := session.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked := 0
+	for _, tool := range list.Tools {
+		raw, err := json.Marshal(tool.InputSchema)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var schema struct {
+			Properties map[string]map[string]any `json:"properties"`
+		}
+		if err := json.Unmarshal(raw, &schema); err != nil {
+			t.Fatalf("%s: %v", tool.Name, err)
+		}
+		for name, property := range schema.Properties {
+			checked++
+			if _, ok := property["type"]; !ok {
+				t.Errorf("%s.%s has no type of its own: %v", tool.Name, name, property)
+			}
+		}
+	}
+	if checked == 0 {
+		t.Fatal("no tool argument was checked: the catalogue or its schema shape changed")
+	}
+}

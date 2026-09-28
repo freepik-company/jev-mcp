@@ -9,6 +9,7 @@
     ],
     "properties": {
       "items": {
+        "type": "array",
         "$ref": "#/$defs/items"
       },
       "categories": {
@@ -45,9 +46,11 @@
     ],
     "properties": {
       "claims": {
+        "type": "array",
         "$ref": "#/$defs/items"
       },
       "evidence": {
+        "type": "array",
         "$ref": "#/$defs/items"
       },
       "model": {
@@ -70,6 +73,7 @@
         "minLength": 1
       },
       "candidates": {
+        "type": "array",
         "$ref": "#/$defs/items"
       },
       "top_k": {
