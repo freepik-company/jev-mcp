@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-28
+
 ### Fixed
 
 - `classify.items`, `verify.claims`, `verify.evidence` and `rerank.candidates`
@@ -60,7 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   no automatic retries of paid calls.
 - Container image and cross-platform release archives built by CI.
 
-[Unreleased]: https://github.com/freepik-company/jev-mcp/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/freepik-company/jev-mcp/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/freepik-company/jev-mcp/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/freepik-company/jev-mcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/freepik-company/jev-mcp/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/freepik-company/jev-mcp/releases/tag/v0.1.0
