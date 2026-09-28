@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `classify.items`, `verify.claims`, `verify.evidence` and `rerank.candidates`
+  declared their type only through `$ref`. Models that write tool calls as XML
+  (Qwen3, GLM) have each argument typed back by the serving engine from the
+  property's own `type`, and vLLM does not follow `$ref`, so those arrays arrived
+  as JSON strings and the calls failed validation. Each now states
+  `"type": "array"` next to its `$ref`, and a test checks that every top-level
+  argument of every tool has its own type.
 - The MCP Registry rejected the `server.json` description for exceeding 100
   characters, so the `v0.3.0` registry publish failed after the release and
   image had shipped. The description is shorter, CI checks it and the other
